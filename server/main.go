@@ -11,9 +11,12 @@ const (
     CONN_TYPE = "tcp"
 )
 
+var quit = make(chan struct{})
+
 func main() {
     fmt.Println("Hello, World!")
     server()    
+    <-quit
 }
 
 func server() {
@@ -39,14 +42,53 @@ func server() {
         panic(err)
     }
 
-    // Accept a stream
-    stream, err := session.Accept()
-    if err != nil {
-        panic(err)
-    }
+    
+        // Accept a stream
+        stream, err := session.AcceptStream()
+        if err != nil {
+            panic(err)
+        }
 
-    // Listen for a message
-    buf := make([]byte, 4)
-    stream.Read(buf)
-    fmt.Println(buf)
+        go handleStream1(stream)
+        // Accept a stream
+        stream2, err := session.AcceptStream()
+        if err != nil {
+            panic(err)
+        }
+
+        go handleStream2(stream2)
+    
+}
+
+func handleStream1(stream *yamux.Stream) {
+    fmt.Println(stream.StreamID())    
+    const size = 10000 * 1024
+    for {
+        // Listen for a message
+        buf := make([]byte, size)
+        n, err := stream.Read(buf)
+        if n == 0 {
+            panic(err)
+        }        
+        if err != nil {
+            panic(err)
+        }        
+        fmt.Println(stream.StreamID(),n)
+    }    
+}
+func handleStream2(stream *yamux.Stream) {
+    fmt.Println(stream.StreamID())    
+    const size = 4
+    for {
+        // Listen for a message
+        buf := make([]byte, size)
+        n, err := stream.Read(buf)
+        if n != size {
+            panic(err)
+        }        
+        if err != nil {
+            panic(err)
+        }        
+        fmt.Println(stream.StreamID(),n)
+    }    
 }
